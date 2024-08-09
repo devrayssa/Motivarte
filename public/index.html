@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SEI LA RAY </title>
+    <style>
+     body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f4;
+        color: #333;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      h2 {
+        text-align: center;
+        color: #ff5722;
+      }
+
+      canvas {
+        border: 2px solid #333;
+        background-color: #fff;
+        display: block;
+        margin: 20px auto;
+      }
+
+      div.button-container {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+      }
+
+      button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        background-color: #ff5722;
+        color: white;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color: #e64a19;
+      }
+
+      #message {
+        margin-top: 20px;
+        font-size: 20px;
+        font-weight: bold;
+        color: #4caf50;
+        text-align: center;
+      }
+
+      #feedbackForm {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+      }
+
+      #feedback {
+        width: 70%;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        font-size: 16px;
+      }
+
+      .btn-enviar {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        background-color: #00D6C4;
+        color: white;
+        cursor: pointer;
+      }
+
+      .btn-enviar:hover {
+        background-color: #1976d2;
+      }
+
+      #feedbackList {
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Jogo Interativo</h2>
+
+      <canvas id="drawingCanvas" width="400" height="400"></canvas>
+
+      <div class="button-container">
+        <button onclick="generateMessage()">Clique para uma mensagem</button>
+      </div>
+
+      <p id="message"></p>
+
+      <form id="feedbackForm">
+        <textarea
+          id="feedback"
+          placeholder="Digite seu comentário..."
+        ></textarea>
+        <button class="btn-enviar" type="button" onclick="submitFeedback()">
+          Enviar
+        </button>
+      </form>
+
+      <h2>Comentários</h2>
+      <div id="feedbackList"></div>
+  
+    <script>
+      const messages = [
+        "Você é incrível!",
+        "Continue assim! Seja gentil",
+        "A vida é curta, sorria enquanto você ainda tem dentes!",
+        "O melhor ainda está por vir!",
+        "Confie em você mesmo!", 
+        "Ray torce muito por você!", 
+        "Não tenha medo do futuro, você que faz seu futuro bb",
+      ];
+
+      function generateMessage() {
+        const randomIndex = Math.floor(Math.random() * messages.length);
+        document.getElementById("message").textContent = messages[randomIndex];
+      }
+
+      const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        function startDrawing(e) {
+            drawing = true;
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX, e.offsetY);
+        }
+
+        function draw(e) {
+            if (!drawing) return;
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function stopDrawing() {
+            drawing = false;
+            ctx.closePath();
+        }
+
+      function submitFeedback() {
+        const feedback = document.getElementById("feedback").value;
+
+        if (feedback.trim() === "") {
+          alert("O comentário não pode estar vazio.");
+          return;
+        }
+
+        fetch("/submit-feedback", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ feedback }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              document.getElementById("feedback").value = "";
+              loadFeedback();
+            } else {
+              alert("Erro ao enviar o comentário.");
+            }
+          })
+          .catch((error) => {
+            console.error("Erro:", error);
+          });
+      }
+
+      function loadFeedback() {
+        fetch("/get-feedback")
+          .then((response) => response.json())
+          .then((data) => {
+            const feedbackList = document.getElementById("feedbackList");
+            feedbackList.innerHTML = "";
+            data.feedback.forEach((item) => {
+              const div = document.createElement("div");
+              div.textContent = item.feedback;
+              feedbackList.appendChild(div);
+            });
+          })
+          .catch((error) => {
+            console.error("Erro:", error);
+          });
+      }
+
+      // Carregar comentários ao iniciar
+      loadFeedback();
+    </script>
+  </body>
+</html>
