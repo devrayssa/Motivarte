@@ -1,48 +1,53 @@
 const express = require("express");
-const bodyParser = require("body-parser");
-const sqlite3 = require("sqlite3").verbose();
+const mongoose = require("mongoose");
 
 const app = express();
 const port = 3000;
 
-// Configurar o banco de dados SQLite
-const db = new sqlite3.Database(":memory:");
-db.serialize(() => {
-  db.run("CREATE TABLE feedback (id INTEGER PRIMARY KEY, feedback TEXT)");
-});
+// Substitua pela sua string de conexão do MongoDB Atlas
+const mongoDBURL =
+  "mongodb+srv://rayttsy:3izFAzjKATZJr0om@cluster0.bh0aa.mongodb.net/";
 
-app.use(bodyParser.json());
+mongoose
+  .connect(mongoDBURL, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("Conectado ao MongoDB!"))
+  .catch((err) => console.error("Erro ao conectar ao MongoDB:", err));
+
+app.use(express.json());
 app.use(express.static("public"));
 
+// Modelo de feedback
+const FeedbackSchema = new mongoose.Schema({
+  feedback: String,
+  createdAt: { type: Date, default: Date.now },
+});
+
+const Feedback = mongoose.model("Feedback", FeedbackSchema);
+
 // Endpoint para enviar feedback
-app.post("/submit-feedback", (req, res) => {
+app.post("/submit-feedback", async (req, res) => {
   const { feedback } = req.body;
-  db.run(
-    "INSERT INTO feedback (feedback) VALUES (?)",
-    [feedback],
-    function (err) {
-      if (err) {
-        console.error(err.message);
-        res.json({ success: false });
-      } else {
-        res.json({ success: true });
-      }
-    }
-  );
+  try {
+    const newFeedback = new Feedback({ feedback });
+    await newFeedback.save();
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ success: false });
+  }
 });
 
 // Endpoint para obter feedback
-app.get("/get-feedback", (req, res) => {
-  db.all("SELECT feedback FROM feedback", [], (err, rows) => {
-    if (err) {
-      console.error(err.message);
-      res.json({ feedback: [] });
-    } else {
-      res.json({ feedback: rows });
-    }
-  });
+app.get("/get-feedback", async (req, res) => {
+  try {
+    const feedbackList = await Feedback.find().sort({ createdAt: -1 });
+    res.json({ feedback: feedbackList });
+  } catch (err) {
+    console.error(err.message);
+    res.json({ feedback: [] });
+  }
 });
 
 app.listen(port, () => {
-  console.log(`Servidor ouvindo na porta ${port}`);
+  console.log(`Servidor rodando na porta ${port}`);
 });
